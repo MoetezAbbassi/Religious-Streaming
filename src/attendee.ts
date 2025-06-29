@@ -1,6 +1,5 @@
 import { Signaling } from './signaling';
 
-const ui = document.getElementById('attendee-ui')!;
 const view = document.getElementById('view') as HTMLVideoElement;
 
 const pc = new RTCPeerConnection();
@@ -24,5 +23,3 @@ signaling.on(async msg => {
 pc.onicecandidate = e => {
   if (e.candidate) signaling.send({ type: 'ice', candidate: e.candidate });
 };
-
-ui.style.display = 'block';

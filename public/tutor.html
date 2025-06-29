@@ -1,31 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Session</title></head>
+<head>
+  <meta charset="UTF-8" />
+  <title>Select Role</title>
+</head>
 <body>
-  <div id="login">
-    <input type="password" id="pw" placeholder="Enter Tutor Password">
-    <button id="login-btn">Login</button>
-  </div>
-
-  <div id="tutor-ui" style="display:none;">
-    <h2>You're the Tutor (Moez)</h2>
-    <button id="share-btn">Share Screen</button>
-    <button id="mic-btn">Toggle Mic</button>
-    <video id="preview" autoplay muted playsinline style="width:80%;border:1px solid #aaa"></video>
-    <ul id="attendees"></ul>
-  </div>
-
-  <div id="attendee-ui" style="display:none;">
-    <h2>Viewing Session</h2>
-    <video id="view" autoplay playsinline style="width:80%;border:1px solid #aaa"></video>
-  </div>
-
-  <script type="module">
-    const role = new URLSearchParams(location.search).get('role');
-    import('./client.js').then(() => {
-      if (role === 'tutor') import('./tutor.js');
-      else import('./attendee.js');
-    });
-  </script>
+  <h1>Join the Session</h1>
+  <button onclick="location.href='/tutor.html?role=tutor'">I'm the Tutor</button>
+  <button onclick="location.href='/tutor.html?role=attendee'">I'm an Attendee</button>
 </body>
 </html>

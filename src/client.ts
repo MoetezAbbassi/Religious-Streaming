@@ -1,4 +1,4 @@
-export async function getMedia(screen = true) {
+export async function getMedia(screen = true): Promise<MediaStream> {
   const screenStream = screen
     ? await navigator.mediaDevices.getDisplayMedia({ video: true })
     : null;
