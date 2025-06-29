@@ -1,67 +1,45 @@
-import { Signaling } from './signaling';
-import { getMedia } from './client';
+import { Signaling, WSMessage } from './signaling';
 
-const loginEl = document.getElementById('login')!;
-const tutorUI = document.getElementById('tutor-ui')!;
-const preview = document.getElementById('preview') as HTMLVideoElement;
-const pwInput = document.getElementById('pw') as HTMLInputElement;
-const loginBtn = document.getElementById('login-btn')!;
+const loginArea = document.getElementById('login-area')!;
+const tutorArea = document.getElementById('tutor-area')!;
 
-let pc: RTCPeerConnection;
 const signaling = new Signaling();
+let pc: RTCPeerConnection;
+const attendees = new Set<string>();
 
-loginBtn.addEventListener('click', async () => {
-  const pw = pwInput.value;
-
-  const res = await fetch('/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: pw })
-  });
-
-  const { ok } = await res.json();
-  if (!ok) {
-    alert('❌ Incorrect password.');
-    return;
-  }
-
-  loginEl.style.display = 'none';
-  tutorUI.style.display = 'block';
-
-  await startTutor();
+// 🔹 Hook login button
+document.getElementById('login-btn')?.addEventListener('click', () => {
+  const pw = (document.getElementById('pw') as HTMLInputElement).value;
+  login(pw);
 });
 
-async function startTutor() {
-  const stream = await getMedia();
-  preview.srcObject = stream;
-
-  pc = new RTCPeerConnection();
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
-
-  pc.onicecandidate = e => {
-    if (e.candidate) signaling.send({ type: 'ice', candidate: e.candidate });
-  };
-
-  signaling.send({ type: 'login', password: 'ok' });
-
-  signaling.on(async msg => {
-    if (msg.type === 'answer') await pc.setRemoteDescription(msg.desc);
-    if (msg.type === 'ice') pc.addIceCandidate(msg.candidate);
+async function login(pw: string) {
+  console.log('Attempting login with password:', pw);  // Debug line
+  const res = await fetch('/login', {
+    method: 'POST',
+    body: JSON.stringify({ password: pw }),
+    headers: { 'Content-Type': 'application/json' }
   });
+  const { ok } = await res.json();
+  if (!ok) return alert('Wrong password');
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  signaling.send({ type: 'offer', desc: offer });
+  loginArea.style.display = 'none';
+  tutorArea.style.display = 'block';
+  initPeer();
 }
 
-document.getElementById('share-btn')!.onclick = async () => {
-  const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-  const track = screen.getVideoTracks()[0];
-  const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-  if (sender) sender.replaceTrack(track);
-};
+function initPeer() {
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  pc.onicecandidate = e => e.candidate && signaling.send({ type: 'ice', candidate: e.candidate });
+  signaling.send({ type: 'login', password: (document.getElementById('pw') as HTMLInputElement).value });
 
-document.getElementById('mic-btn')!.onclick = () => {
-  const tracks = (preview.srcObject as MediaStream).getAudioTracks();
-  tracks.forEach(t => (t.enabled = !t.enabled));
-};
+  signaling.on(async msg => {
+    if (msg.type === 'offer') {
+      await pc.setRemoteDescription(msg.desc);
+      const ans = await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      signaling.send({ type: 'answer', desc: ans });
+    }
+    if (msg.type === 'ice') pc.addIceCandidate(msg.candidate);
+  });
+}

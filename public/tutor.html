@@ -1,12 +1,28 @@
+<!-- tutor.html (unchanged) -->
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Select Role</title>
-</head>
+<html>
+<head><meta charset="utf-8"><title>Tutor Platform</title></head>
 <body>
-  <h1>Join the Session</h1>
-  <button onclick="location.href='/tutor.html?role=tutor'">I'm the Tutor</button>
-  <button onclick="location.href='/tutor.html?role=attendee'">I'm an Attendee</button>
+  <div id="login-area">
+    <input type="password" id="pw" placeholder="Password">
+    <button id="login-btn">Login as Tutor</button>
+  </div>
+
+  <div id="tutor-area" style="display:none;">
+    <video id="screen" autoplay muted playsinline style="width:80%;border:1px solid #ccc"></video>
+    <button id="share-btn">Start Screenshare</button>
+    <button id="mute-btn">Mute Mic</button>
+    <ul id="attendees"></ul>
+  </div>
+
+  <div id="attendee-area" style="display:none;">
+    <video id="view" autoplay playsinline style="width:80%;border:1px solid #ccc"></video>
+    <p>You are viewing as attendee.</p>
+  </div>
+
+  <script src="client.js" type="module"></script>
+  <script src="signaling.js" type="module"></script>
+  <script src="tutor.js" type="module"></script>
+  <script src="attendee.js" type="module"></script>
 </body>
 </html>

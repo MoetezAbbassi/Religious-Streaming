@@ -4,8 +4,8 @@ export class Signaling {
   ws: WebSocket;
 
   constructor() {
-    const url = location.protocol === 'https:' ? 'wss' : 'ws';
-    this.ws = new WebSocket(`${url}://${location.host}`);
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    this.ws = new WebSocket(`${proto}://${location.host}`);
   }
 
   send(msg: WSMessage) {
@@ -13,6 +13,6 @@ export class Signaling {
   }
 
   on(fn: (msg: WSMessage) => void) {
-    this.ws.addEventListener('message', e => fn(JSON.parse(e.data)));
+    this.ws.addEventListener('message', (e) => fn(JSON.parse(e.data)));
   }
 }
