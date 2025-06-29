@@ -1,0 +1,17 @@
+{
+  "name": "tutor-platform",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/server/index.js",
+    "dev": "ts-node server/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.3",
+    "ts-node": "^10.9.1"
+  }
+}
