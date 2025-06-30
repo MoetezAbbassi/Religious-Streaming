@@ -61,3 +61,18 @@ button:hover {
 .mic-off { background: #dc3545; }
 .screen-on { background: #007bff; }
 .screen-off { background: #6c757d; }
+
+
+.download-btn {
+  display: inline-block;
+  margin-top: 20px;
+  background: #28a745;
+  color: white;
+  padding: 12px 18px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.download-btn:hover {
+  background: #218838;
+}

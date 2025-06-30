@@ -1,7 +1,10 @@
 const socket = io();
+
 let micStream = null;
 let screenStream = null;
 let peers = {};
+let mediaRecorder;
+let recordedChunks = [];
 
 socket.emit('broadcaster');
 
@@ -48,11 +51,39 @@ document.getElementById('screenBtn').onclick = async () => {
     document.getElementById('screenBtn').className = 'screen-on';
     document.getElementById('screenBtn').textContent = 'Screen On';
     document.getElementById('preview').srcObject = screenStream;
+
+    const combined = new MediaStream([
+      ...screenStream.getTracks(),
+      ...(micStream?.getAudioTracks() || [])
+    ]);
+
+    mediaRecorder = new MediaRecorder(combined);
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+
+      const downloadBtn = document.createElement('a');
+      downloadBtn.href = url;
+      downloadBtn.download = `lecture-${Date.now()}.webm`;
+      downloadBtn.textContent = 'Download Stream';
+      downloadBtn.className = 'download-btn';
+      document.body.appendChild(downloadBtn);
+    };
+
+    mediaRecorder.start();
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
     document.getElementById('screenBtn').className = 'screen-off';
     document.getElementById('screenBtn').textContent = 'Screen Off';
     document.getElementById('preview').srcObject = null;
+
+    mediaRecorder?.stop();
   }
 };
