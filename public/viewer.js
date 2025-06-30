@@ -1,9 +1,24 @@
+import SimplePeer from 'https://cdn.skypack.dev/simple-peer';
+const socket = io();
+let peer;
+
 const video = document.getElementById('viewer');
-const fullBtn = document.getElementById('fullscreenBtn');
 
-fullBtn.onclick = () => {
-  if (video.requestFullscreen) video.requestFullscreen();
-  else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
-  else if (video.msRequestFullscreen) video.msRequestFullscreen();
-};
+socket.emit('watcher');
 
+socket.on('offer', (id, signal) => {
+  peer = new SimplePeer({ initiator: false, trickle: false });
+
+  peer.on('signal', data => socket.emit('answer', id, data));
+  peer.on('stream', stream => video.srcObject = stream);
+
+  peer.signal(signal);
+});
+
+socket.on('candidate', (id, candidate) => {
+  peer.signal(candidate);
+});
+
+socket.on('disconnectPeer', () => {
+  if (peer) peer.destroy();
+});

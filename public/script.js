@@ -1,51 +1,60 @@
-let micStream, screenStream, combinedStream;
-let micOn = false, screenOn = false;
+import SimplePeer from 'https://cdn.skypack.dev/simple-peer';
+const socket = io();
 
-const micBtn = document.getElementById('micBtn');
-const screenBtn = document.getElementById('screenBtn');
-const video = document.getElementById('preview');
+let micStream = null;
+let screenStream = null;
+let peers = {};
 
-micBtn.onclick = async () => {
-  if (!micOn) {
+socket.emit('broadcaster');
+
+socket.on('watcher', (id) => {
+  const tracks = [...(screenStream?.getTracks() || []), ...(micStream?.getAudioTracks() || [])];
+  const stream = new MediaStream(tracks);
+  const peer = new SimplePeer({ initiator: true, trickle: false, stream });
+
+  peer.on('signal', data => socket.emit('offer', id, data));
+  peer.on('close', () => delete peers[id]);
+
+  peers[id] = peer;
+});
+
+socket.on('answer', (id, signal) => {
+  peers[id]?.signal(signal);
+});
+
+socket.on('candidate', (id, candidate) => {
+  peers[id]?.signal(candidate);
+});
+
+socket.on('disconnectPeer', (id) => {
+  peers[id]?.destroy();
+  delete peers[id];
+});
+
+document.getElementById('micBtn').onclick = async () => {
+  if (!micStream) {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    micOn = true;
-    micBtn.className = 'mic-on';
-    micBtn.textContent = 'Mic On';
+    document.getElementById('micBtn').className = 'mic-on';
+    document.getElementById('micBtn').textContent = 'Mic On';
   } else {
-    micStream.getTracks().forEach(track => track.stop());
+    micStream.getTracks().forEach(t => t.stop());
     micStream = null;
-    micOn = false;
-    micBtn.className = 'mic-off';
-    micBtn.textContent = 'Mic Off';
+    document.getElementById('micBtn').className = 'mic-off';
+    document.getElementById('micBtn').textContent = 'Mic Off';
   }
-  updatePreview();
 };
 
-screenBtn.onclick = async () => {
-  if (!screenOn) {
+document.getElementById('screenBtn').onclick = async () => {
+  if (!screenStream) {
     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    screenOn = true;
-    screenBtn.className = 'screen-on';
-    screenBtn.textContent = 'Screen On';
+    document.getElementById('screenBtn').className = 'screen-on';
+    document.getElementById('screenBtn').textContent = 'Screen On';
+    document.getElementById('preview').srcObject = screenStream;
   } else {
-    screenStream.getTracks().forEach(track => track.stop());
+    screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
-    screenOn = false;
-    screenBtn.className = 'screen-off';
-    screenBtn.textContent = 'Screen Off';
+    document.getElementById('screenBtn').className = 'screen-off';
+    document.getElementById('screenBtn').textContent = 'Screen Off';
+    document.getElementById('preview').srcObject = null;
   }
-  updatePreview();
 };
-
-function updatePreview() {
-  const tracks = [];
-  if (screenStream) tracks.push(...screenStream.getTracks());
-  if (micStream) tracks.push(...micStream.getTracks());
-
-  if (tracks.length) {
-    combinedStream = new MediaStream(tracks);
-    video.srcObject = combinedStream;
-  } else {
-    video.srcObject = null;
-  }
-}
