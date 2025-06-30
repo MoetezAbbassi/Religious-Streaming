@@ -4,55 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Live Stream</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="script.js"></script>
-
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h2 {
-      margin-bottom: 20px;
-    }
-    .controls {
-      display: flex;
-      gap: 20px;
-    }
-    button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      color: white;
-      transition: background-color 0.3s;
-    }
-    .mic-on { background: #28a745; }
-    .mic-off { background: #dc3545; }
-    .screen-on { background: #007bff; }
-    .screen-off { background: #6c757d; }
-    video {
-      margin-top: 30px;
-      max-width: 80vw;
-      border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="attendee-body">
   <h2>Live Stream Control Panel</h2>
   <div class="controls">
     <button id="micBtn" class="mic-off">Toggle Mic</button>
     <button id="screenBtn" class="screen-off">Toggle Screen</button>
   </div>
   <video id="preview" autoplay muted></video>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

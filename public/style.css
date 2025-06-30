@@ -50,3 +50,14 @@ button {
 button:hover {
   background: #004ecc;
 }
+
+.controls {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.mic-on { background: #28a745; }
+.mic-off { background: #dc3545; }
+.screen-on { background: #007bff; }
+.screen-off { background: #6c757d; }

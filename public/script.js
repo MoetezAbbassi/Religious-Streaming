@@ -1,6 +1,4 @@
-import SimplePeer from 'https://cdn.skypack.dev/simple-peer';
 const socket = io();
-
 let micStream = null;
 let screenStream = null;
 let peers = {};

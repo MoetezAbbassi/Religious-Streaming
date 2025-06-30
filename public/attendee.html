@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="viewer.js"></script>
-
   <title>Live Class</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,10 +10,13 @@
   <div class="attendee-container">
     <h1 class="title">Live Lecture Stream</h1>
     <div class="video-wrapper">
-      <video id="viewer" autoplay playsinline controls muted></video>
+      <video id="viewer" autoplay playsinline controls></video>
     </div>
     <button id="fullscreenBtn">Toggle Fullscreen</button>
   </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="viewer.js"></script>
 </body>
 </html>

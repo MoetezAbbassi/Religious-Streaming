@@ -1,7 +1,5 @@
-import SimplePeer from 'https://cdn.skypack.dev/simple-peer';
 const socket = io();
 let peer;
-
 const video = document.getElementById('viewer');
 
 socket.emit('watcher');
@@ -22,3 +20,7 @@ socket.on('candidate', (id, candidate) => {
 socket.on('disconnectPeer', () => {
   if (peer) peer.destroy();
 });
+
+document.getElementById('fullscreenBtn').onclick = () => {
+  if (video.requestFullscreen) video.requestFullscreen();
+};
