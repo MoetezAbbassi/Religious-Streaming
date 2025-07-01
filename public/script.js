@@ -32,26 +32,24 @@ document.getElementById('screenBtn').onclick = async () => {
 
     const ctx = new AudioContext();
     const dest = ctx.createMediaStreamDestination();
+
     if (micStream) ctx.createMediaStreamSource(micStream).connect(dest);
-    const sysTracks = screenStream.getAudioTracks();
-    if (sysTracks.length) ctx.createMediaStreamSource(new MediaStream(sysTracks)).connect(dest);
+    if (screenStream.getAudioTracks().length)
+      ctx.createMediaStreamSource(new MediaStream(screenStream.getAudioTracks())).connect(dest);
 
     mixedStream = new MediaStream([
       ...screenStream.getVideoTracks(),
       ...dest.stream.getAudioTracks()
     ]);
 
+    socket.emit('broadcaster'); // Must trigger after mixedStream is created
+    socket.emit('screen-toggle', true);
+    socket.emit('stream-status', { paused: false, online: true });
+
     chunks = [];
     mediaRecorder = new MediaRecorder(mixedStream);
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
     mediaRecorder.start();
-
-    socket.emit('broadcaster');
-    socket.emit('screen-toggle', true);
-    socket.emit('stream-status', { paused: false, online: true });
-
-    socket.once('watcher', id => {}); // placeholders
-
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
@@ -80,13 +78,23 @@ document.getElementById('screenBtn').onclick = async () => {
 
 socket.on('watcher', id => {
   if (!mixedStream) return;
-  const peer = new SimplePeer({ initiator: true, trickle: false, stream: mixedStream });
+
+  const peer = new SimplePeer({ initiator: true, trickle: false });
   peer.on('signal', data => socket.emit('offer', id, data));
-  peer.on('close', () => peer.destroy());
+
+  peer.on('connect', () => {
+    mixedStream.getTracks().forEach(track => peer._pc.addTrack(track, mixedStream));
+  });
+
+  peer.on('close', () => {
+    peer.destroy();
+    delete peers[id];
+  });
+
   peers[id] = peer;
 });
 
-socket.on('answer', (id, signal) => peers[id]?.signal(signal));
+socket.on('answer', (id, sig) => peers[id]?.signal(sig));
 socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
 socket.on('disconnectPeer', id => peers[id]?.destroy());
 

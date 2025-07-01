@@ -33,7 +33,7 @@ socket.on('screen-toggle', on => {
 });
 
 socket.on('mic-toggle', on => {
-  // Optionally show mic indicator in UI
+  // Optional: Show mic active indicator
 });
 
 document.getElementById('fullscreenBtn').onclick = () => {
