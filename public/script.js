@@ -10,37 +10,24 @@ socket.emit('broadcaster');
 
 socket.on('watcher', id => {
   if (!mixedStream) return;
-
-  const peer = new SimplePeer({ initiator: true, trickle: false });
-
+  const peer = new SimplePeer({ initiator: true, trickle: false, stream: mixedStream });
   peer.on('signal', data => socket.emit('offer', id, data));
-
-  peer.on('connect', () => {
-    mixedStream.getTracks().forEach(track => peer._pc.addTrack(track, mixedStream));
-  });
-
-  peer.on('close', () => {
-    peer.destroy();
-    delete peers[id];
-  });
-
+  peer.on('close', () => peer.destroy());
   peers[id] = peer;
 });
 
-socket.on('answer', (id, sig) => peers[id]?.signal(sig));
-socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
-socket.on('disconnectPeer', id => peers[id]?.destroy() && delete peers[id]);
+socket.on('answer', (id, signal) => peers[id]?.signal(signal));
+socket.on('candidate', (id, candidate) => peers[id]?.signal(candidate));
+socket.on('disconnectPeer', (id) => peers[id]?.destroy());
 
 document.getElementById('micBtn').onclick = async () => {
   if (!micStream) {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    micBtn.className = 'mic-on';
-    micBtn.textContent = 'Mic On';
+    micBtn.className = 'mic-on'; micBtn.textContent = 'Mic On';
   } else {
     micStream.getTracks().forEach(t => t.stop());
     micStream = null;
-    micBtn.className = 'mic-off';
-    micBtn.textContent = 'Mic Off';
+    micBtn.className = 'mic-off'; micBtn.textContent = 'Mic Off';
   }
 };
 
@@ -51,41 +38,24 @@ document.getElementById('screenBtn').onclick = async () => {
     screenBtn.className = 'screen-on';
     screenBtn.textContent = 'Screen On';
 
-    const audioContext = new AudioContext();
-    const dest = audioContext.createMediaStreamDestination();
+    const ctx = new AudioContext();
+    const dest = ctx.createMediaStreamDestination();
+    if (micStream) ctx.createMediaStreamSource(micStream).connect(dest);
+    if (screenStream.getAudioTracks().length)
+      ctx.createMediaStreamSource(new MediaStream(screenStream.getAudioTracks())).connect(dest);
 
-    if (micStream) {
-      const micSource = audioContext.createMediaStreamSource(micStream);
-      micSource.connect(dest);
-    }
-
-    const sysAudioTracks = screenStream.getAudioTracks();
-    if (sysAudioTracks.length > 0) {
-      const sysStream = new MediaStream(sysAudioTracks);
-      const sysSource = audioContext.createMediaStreamSource(sysStream);
-      sysSource.connect(dest);
-    }
-
-    const combinedTracks = [
+    mixedStream = new MediaStream([
       ...screenStream.getVideoTracks(),
       ...dest.stream.getAudioTracks()
-    ];
-    mixedStream = new MediaStream(combinedTracks);
+    ]);
 
     socket.emit('broadcaster');
     socket.emit('stream-status', { paused: false, online: true });
 
     chunks = [];
     mediaRecorder = new MediaRecorder(mixedStream);
-    mediaRecorder.ondataavailable = e => {
-      if (e.data.size > 0) {
-        chunks.push(e.data);
-        e.data.arrayBuffer().then(buffer => {
-          socket.emit('stream-packet', buffer);
-        });
-      }
-    };
-    mediaRecorder.start(1000);
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.start();
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
@@ -99,19 +69,16 @@ document.getElementById('screenBtn').onclick = async () => {
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
+      const vid = document.createElement('video');
+      vid.controls = true; vid.src = url; vid.className = 'replay-video';
+      document.body.appendChild(vid);
 
-      const replay = document.createElement('video');
-      replay.src = url;
-      replay.controls = true;
-      replay.className = 'replay-video';
-      document.body.appendChild(replay);
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `lecture-${Date.now()}.webm`;
-      link.className = 'download-btn';
-      link.textContent = 'Download Stream';
-      document.body.appendChild(link);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lecture-${Date.now()}.webm`;
+      a.textContent = 'Download Stream';
+      a.className = 'download-btn';
+      document.body.appendChild(a);
     };
   }
 };

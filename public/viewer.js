@@ -1,55 +1,38 @@
 const socket = io();
-let mediaSource, sourceBuffer;
+let peer;
 const video = document.getElementById('viewer');
+const statusLabel = document.getElementById('statusLabel');
 const pausedOverlay = document.getElementById('pausedOverlay');
 
 socket.emit('watcher');
 
-function initMediaSource() {
-  mediaSource = new MediaSource();
-  video.src = URL.createObjectURL(mediaSource);
-  mediaSource.addEventListener('sourceopen', () => {
-    sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8,vorbis"');
-  });
-}
-
-socket.on('stream-packet', async blob => {
-  if (!mediaSource) initMediaSource();
-  await waitFor(() => sourceBuffer && !sourceBuffer.updating);
-  sourceBuffer.appendBuffer(new Uint8Array(blob));
-
-});
-
-socket.on('stream-status', ({ paused }) => {
-  if (paused) {
-    pausedOverlay.style.display = 'flex';
-    video.pause();
-  } else {
-    pausedOverlay.style.display = 'none';
-    video.play().catch(() => {}); // autoplay policy workaround
-  }
-});
-
-socket.on('offer', (id, sig) => {
-  const peer = new SimplePeer({ initiator: false, trickle: false });
+socket.on('offer', (id, signal) => {
+  peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
     video.srcObject = stream;
     video.play();
     pausedOverlay.style.display = 'none';
   });
-  peer.signal(sig);
+  peer.signal(signal);
 });
 
-socket.on('candidate', (id, cand) => peer?.signal(cand));
+socket.on('candidate', (id, candidate) => peer?.signal(candidate));
 socket.on('disconnectPeer', () => peer?.destroy());
 
-document.getElementById('fullscreenBtn').onclick = () => {
-  if (video.requestFullscreen) video.requestFullscreen();
-};
+socket.on('stream-status', ({ paused, online }) => {
+  if (paused) {
+    pausedOverlay.style.display = 'flex';
+    video.pause();
+  } else {
+    pausedOverlay.style.display = 'none';
+    video.play().catch(() => {});
+  }
 
-function waitFor(cond) {
-  return new Promise(res => {
-    const iv = setInterval(() => { if (cond()) { clearInterval(iv); res(); } }, 50);
-  });
-}
+  statusLabel.textContent = online ? 'STREAM ON' : 'STREAM OFF';
+  statusLabel.style.background = online ? 'green' : 'red';
+});
+
+document.getElementById('fullscreenBtn').onclick = () => {
+  video.requestFullscreen?.();
+};
