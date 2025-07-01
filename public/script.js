@@ -9,12 +9,22 @@ let chunks = [];
 socket.emit('broadcaster');
 
 socket.on('watcher', id => {
-  if (mixedStream) {
-    const peer = new SimplePeer({ initiator: true, trickle: false, stream: mixedStream });
-    peer.on('signal', data => socket.emit('offer', id, data));
-    peer.on('close', () => delete peers[id]);
-    peers[id] = peer;
-  }
+  if (!mixedStream) return;
+
+  const peer = new SimplePeer({ initiator: true, trickle: false });
+
+  peer.on('signal', data => socket.emit('offer', id, data));
+
+  peer.on('connect', () => {
+    mixedStream.getTracks().forEach(track => peer._pc.addTrack(track, mixedStream));
+  });
+
+  peer.on('close', () => {
+    peer.destroy();
+    delete peers[id];
+  });
+
+  peers[id] = peer;
 });
 
 socket.on('answer', (id, sig) => peers[id]?.signal(sig));
