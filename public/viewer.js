@@ -1,7 +1,7 @@
 const socket = io();
 let mediaSource, sourceBuffer;
 const video = document.getElementById('viewer');
-video.controls = true;
+const pausedOverlay = document.getElementById('pausedOverlay');
 
 socket.emit('watcher');
 
@@ -20,12 +20,23 @@ socket.on('stream-packet', async blob => {
   sourceBuffer.appendBuffer(buf);
 });
 
+socket.on('stream-status', ({ paused }) => {
+  if (paused) {
+    pausedOverlay.style.display = 'flex';
+    video.pause();
+  } else {
+    pausedOverlay.style.display = 'none';
+    video.play().catch(() => {}); // autoplay policy workaround
+  }
+});
+
 socket.on('offer', (id, sig) => {
   const peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
     video.srcObject = stream;
-    video.play(); // immediate start for new viewers
+    video.play();
+    pausedOverlay.style.display = 'none';
   });
   peer.signal(sig);
 });

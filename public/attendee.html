@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Class</title>
-  <link rel="stylesheet" href="style.css">
-</head>
 <body class="attendee-body">
   <h1 class="title">Live Lecture Stream</h1>
   <div class="video-wrapper">
     <video id="viewer" playsinline></video>
+    <div id="pausedOverlay">Stream Paused</div>
   </div>
   <button id="fullscreenBtn">Toggle Fullscreen</button>
 
@@ -16,4 +10,3 @@
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="viewer.js"></script>
 </body>
-</html>

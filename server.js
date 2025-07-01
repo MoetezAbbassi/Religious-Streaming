@@ -22,6 +22,7 @@ app.post('/login', (req, res) => {
 let broadcasterSocketId = null;
 
 io.on('connection', (socket) => {
+  socket.on('stream-status', data => io.emit('stream-status', data));
   socket.on('broadcaster', () => {
     broadcasterSocketId = socket.id;
   });
