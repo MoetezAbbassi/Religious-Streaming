@@ -1,11 +1,10 @@
 const socket = io();
-socket.emit('watcher');
-
 let mediaSource, sourceBuffer;
 const video = document.getElementById('viewer');
 video.controls = true;
 
-// Initialize MSE when first chunk arrives
+socket.emit('watcher');
+
 function initMediaSource() {
   mediaSource = new MediaSource();
   video.src = URL.createObjectURL(mediaSource);
@@ -18,24 +17,26 @@ socket.on('stream-packet', async blob => {
   if (!mediaSource) initMediaSource();
   await waitFor(() => sourceBuffer && !sourceBuffer.updating);
   const buf = await blob.arrayBuffer();
-  sourceBuffer.appendBuffer(new Uint8Array(buf));
+  sourceBuffer.appendBuffer(buf);
 });
 
 socket.on('offer', (id, sig) => {
   const peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
-  peer.on('stream', stream => video.srcObject = stream);
+  peer.on('stream', stream => {
+    video.srcObject = stream;
+    video.play(); // immediate start for new viewers
+  });
   peer.signal(sig);
 });
 
-socket.on('candidate', (id, cand) => peer.signal(cand));
+socket.on('candidate', (id, cand) => peer?.signal(cand));
 socket.on('disconnectPeer', () => peer?.destroy());
 
 document.getElementById('fullscreenBtn').onclick = () => {
   if (video.requestFullscreen) video.requestFullscreen();
 };
 
-// Utility wait function
 function waitFor(cond) {
   return new Promise(res => {
     const iv = setInterval(() => { if (cond()) { clearInterval(iv); res(); } }, 50);

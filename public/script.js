@@ -4,10 +4,8 @@ let screenStream = null;
 let peers = {};
 let mediaRecorder;
 
-// Signal lecturer presence
 socket.emit('broadcaster');
 
-// Handle viewer connections
 socket.on('watcher', id => {
   const combined = new MediaStream([
     ...(screenStream?.getTracks() || []),
@@ -18,13 +16,10 @@ socket.on('watcher', id => {
   peer.on('close', () => delete peers[id]);
   peers[id] = peer;
 });
-
-// Handle signaling
 socket.on('answer', (id, sig) => peers[id]?.signal(sig));
 socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
-socket.on('disconnectPeer', id => { peers[id]?.destroy(); delete peers[id]; });
+socket.on('disconnectPeer', id => peers[id]?.destroy() && delete peers[id]);
 
-// Mic toggle
 document.getElementById('micBtn').onclick = async () => {
   if (!micStream) {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -36,20 +31,21 @@ document.getElementById('micBtn').onclick = async () => {
   }
 };
 
-// Screen toggle and recording
 document.getElementById('screenBtn').onclick = async () => {
   if (!screenStream) {
     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     screenBtn.className = 'screen-on'; screenBtn.textContent = 'Screen On';
     preview.srcObject = screenStream;
 
-    const combined = new MediaStream([
-      ...screenStream.getTracks(),
+    const combinedTracks = [
+      ...screenStream.getVideoTracks(),
+      ...(screenStream.getAudioTracks() || []),
       ...(micStream?.getAudioTracks() || [])
-    ]);
+    ];
+    const combined = new MediaStream(combinedTracks);
 
     mediaRecorder = new MediaRecorder(combined);
-    let chunks = [];
+    const chunks = [];
     mediaRecorder.ondataavailable = e => {
       if (e.data.size > 0) {
         socket.emit('stream-packet', e.data);
@@ -59,6 +55,7 @@ document.getElementById('screenBtn').onclick = async () => {
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
+
       const replay = document.createElement('video');
       replay.src = url;
       replay.controls = true;
@@ -72,7 +69,8 @@ document.getElementById('screenBtn').onclick = async () => {
       link.className = 'download-btn';
       document.body.appendChild(link);
     };
-    mediaRecorder.start();
+
+    mediaRecorder.start(1000); // gather data in 1s intervals
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
