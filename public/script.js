@@ -80,7 +80,9 @@ document.getElementById('screenBtn').onclick = async () => {
     mediaRecorder.ondataavailable = e => {
       if (e.data.size > 0) {
         chunks.push(e.data);
-        socket.emit('stream-packet', e.data);
+        e.data.arrayBuffer().then(buffer => {
+          socket.emit('stream-packet', buffer);
+        });
       }
     };
     mediaRecorder.start(1000);

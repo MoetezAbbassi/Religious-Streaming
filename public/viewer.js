@@ -16,8 +16,8 @@ function initMediaSource() {
 socket.on('stream-packet', async blob => {
   if (!mediaSource) initMediaSource();
   await waitFor(() => sourceBuffer && !sourceBuffer.updating);
-  const buf = await blob.arrayBuffer();
-  sourceBuffer.appendBuffer(buf);
+  sourceBuffer.appendBuffer(new Uint8Array(blob));
+
 });
 
 socket.on('stream-status', ({ paused }) => {
