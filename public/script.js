@@ -24,44 +24,45 @@ socket.on('disconnectPeer', id => peers[id]?.destroy() && delete peers[id]);
 document.getElementById('micBtn').onclick = async () => {
   if (!micStream) {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    micBtn.className = 'mic-on'; micBtn.textContent = 'Mic On';
+    micBtn.className = 'mic-on';
+    micBtn.textContent = 'Mic On';
   } else {
     micStream.getTracks().forEach(t => t.stop());
     micStream = null;
-    micBtn.className = 'mic-off'; micBtn.textContent = 'Mic Off';
+    micBtn.className = 'mic-off';
+    micBtn.textContent = 'Mic Off';
   }
 };
 
 document.getElementById('screenBtn').onclick = async () => {
   if (!screenStream) {
     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    screenBtn.className = 'screen-on'; screenBtn.textContent = 'Screen On';
     document.getElementById('preview').srcObject = screenStream;
+    screenBtn.className = 'screen-on';
+    screenBtn.textContent = 'Screen On';
 
-    // Mix mic + system audio
     const audioContext = new AudioContext();
-    const destination = audioContext.createMediaStreamDestination();
+    const dest = audioContext.createMediaStreamDestination();
 
     if (micStream) {
       const micSource = audioContext.createMediaStreamSource(micStream);
-      micSource.connect(destination);
+      micSource.connect(dest);
     }
 
-    const screenAudioTracks = screenStream.getAudioTracks();
-    if (screenAudioTracks.length > 0) {
-      const sysAudio = new MediaStream(screenAudioTracks);
-      const sysSource = audioContext.createMediaStreamSource(sysAudio);
-      sysSource.connect(destination);
+    const sysAudioTracks = screenStream.getAudioTracks();
+    if (sysAudioTracks.length > 0) {
+      const sysStream = new MediaStream(sysAudioTracks);
+      const sysSource = audioContext.createMediaStreamSource(sysStream);
+      sysSource.connect(dest);
     }
 
-    const mixedAudioTracks = destination.stream.getAudioTracks();
-    const videoTracks = screenStream.getVideoTracks();
-    mixedStream = new MediaStream([...videoTracks, ...mixedAudioTracks]);
+    const combinedTracks = [
+      ...screenStream.getVideoTracks(),
+      ...dest.stream.getAudioTracks()
+    ];
+    mixedStream = new MediaStream(combinedTracks);
 
-    // Start broadcasting
     socket.emit('broadcaster');
-
-    // Notify attendees that stream resumed
     socket.emit('stream-status', { paused: false });
 
     chunks = [];
@@ -77,7 +78,8 @@ document.getElementById('screenBtn').onclick = async () => {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
     document.getElementById('preview').srcObject = null;
-    screenBtn.className = 'screen-off'; screenBtn.textContent = 'Screen Off';
+    screenBtn.className = 'screen-off';
+    screenBtn.textContent = 'Screen Off';
 
     mediaRecorder?.stop();
     socket.emit('stream-status', { paused: true });
