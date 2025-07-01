@@ -22,7 +22,6 @@ app.post('/login', (req, res) => {
 let broadcasterSocketId = null;
 
 io.on('connection', (socket) => {
-  socket.on('stream-status', data => io.emit('stream-status', data));
   socket.on('broadcaster', () => {
     broadcasterSocketId = socket.id;
   });
@@ -47,6 +46,14 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     io.emit('disconnectPeer', socket.id);
+  });
+
+  socket.on('stream-packet', (data) => {
+    io.emit('stream-packet', data);
+  });
+
+  socket.on('stream-status', (data) => {
+    io.emit('stream-status', data);
   });
 });
 

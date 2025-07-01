@@ -73,7 +73,7 @@ document.getElementById('screenBtn').onclick = async () => {
     mixedStream = new MediaStream(combinedTracks);
 
     socket.emit('broadcaster');
-    socket.emit('stream-status', { paused: false });
+    socket.emit('stream-status', { paused: false, online: true });
 
     chunks = [];
     mediaRecorder = new MediaRecorder(mixedStream);
@@ -92,7 +92,7 @@ document.getElementById('screenBtn').onclick = async () => {
     screenBtn.textContent = 'Screen Off';
 
     mediaRecorder?.stop();
-    socket.emit('stream-status', { paused: true });
+    socket.emit('stream-status', { paused: true, online: false });
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });

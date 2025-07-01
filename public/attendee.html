@@ -26,6 +26,15 @@
       text-align: center;
     }
 
+    #statusLabel {
+      padding: 10px 16px;
+      font-size: 1rem;
+      color: white;
+      font-weight: bold;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+
     .video-wrapper {
       position: relative;
       display: flex;
@@ -79,6 +88,7 @@
 </head>
 <body class="attendee-body">
   <h1 class="title">Live Lecture Stream</h1>
+  <div id="statusLabel">STREAM OFF</div>
   <div class="video-wrapper">
     <video id="viewer" playsinline></video>
     <div id="pausedOverlay">Stream Paused</div>
