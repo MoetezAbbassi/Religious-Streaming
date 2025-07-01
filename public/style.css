@@ -76,3 +76,5 @@ button:hover {
 .download-btn:hover {
   background: #218838;
 }
+
+.replay-video { display:block; margin:20px auto; max-width:80%; }

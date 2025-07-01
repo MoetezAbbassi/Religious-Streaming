@@ -1,26 +1,43 @@
 const socket = io();
-let peer;
-const video = document.getElementById('viewer');
-
 socket.emit('watcher');
 
-socket.on('offer', (id, signal) => {
-  peer = new SimplePeer({ initiator: false, trickle: false });
+let mediaSource, sourceBuffer;
+const video = document.getElementById('viewer');
+video.controls = true;
 
+// Initialize MSE when first chunk arrives
+function initMediaSource() {
+  mediaSource = new MediaSource();
+  video.src = URL.createObjectURL(mediaSource);
+  mediaSource.addEventListener('sourceopen', () => {
+    sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8,vorbis"');
+  });
+}
+
+socket.on('stream-packet', async blob => {
+  if (!mediaSource) initMediaSource();
+  await waitFor(() => sourceBuffer && !sourceBuffer.updating);
+  const buf = await blob.arrayBuffer();
+  sourceBuffer.appendBuffer(new Uint8Array(buf));
+});
+
+socket.on('offer', (id, sig) => {
+  const peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => video.srcObject = stream);
-
-  peer.signal(signal);
+  peer.signal(sig);
 });
 
-socket.on('candidate', (id, candidate) => {
-  peer.signal(candidate);
-});
-
-socket.on('disconnectPeer', () => {
-  if (peer) peer.destroy();
-});
+socket.on('candidate', (id, cand) => peer.signal(cand));
+socket.on('disconnectPeer', () => peer?.destroy());
 
 document.getElementById('fullscreenBtn').onclick = () => {
   if (video.requestFullscreen) video.requestFullscreen();
 };
+
+// Utility wait function
+function waitFor(cond) {
+  return new Promise(res => {
+    const iv = setInterval(() => { if (cond()) { clearInterval(iv); res(); } }, 50);
+  });
+}
