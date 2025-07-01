@@ -10,53 +10,52 @@ const io = new Server(server);
 
 const PASSWORD = 'secret123';
 
+let sessionState = {
+  screenOn: false,
+  micOn: false
+};
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
 
 app.post('/login', (req, res) => {
-  const { password } = req.body;
-  if (password === PASSWORD) return res.redirect('/stream.html');
-  return res.send('Incorrect password');
+  if (req.body.password === PASSWORD) return res.redirect('/stream.html');
+  res.send('Incorrect password');
 });
 
-let broadcasterSocketId = null;
-
 io.on('connection', (socket) => {
+  socket.emit('session-state', sessionState);
+
   socket.on('broadcaster', () => {
-    broadcasterSocketId = socket.id;
+    // nothing else needed here
+  });
+
+  socket.on('screen-toggle', (on) => {
+    sessionState.screenOn = on;
+    io.emit('screen-toggle', on);
+  });
+
+  socket.on('mic-toggle', (on) => {
+    sessionState.micOn = on;
+    io.emit('mic-toggle', on);
+  });
+
+  socket.on('stream-status', ({ paused, online }) => {
+    sessionState.screenOn = online;
+    io.emit('stream-status', { paused, online });
   });
 
   socket.on('watcher', () => {
-    if (broadcasterSocketId) {
-      io.to(broadcasterSocketId).emit('watcher', socket.id);
-    }
+    io.emit('watcher');
   });
 
-  socket.on('offer', (id, message) => {
-    io.to(id).emit('offer', socket.id, message);
-  });
-
-  socket.on('answer', (id, message) => {
-    io.to(id).emit('answer', socket.id, message);
-  });
-
-  socket.on('candidate', (id, message) => {
-    io.to(id).emit('candidate', socket.id, message);
-  });
+  socket.on('offer', (id, msg) => io.to(id).emit('offer', socket.id, msg));
+  socket.on('answer', (id, msg) => io.to(id).emit('answer', socket.id, msg));
+  socket.on('candidate', (id, msg) => io.to(id).emit('candidate', socket.id, msg));
 
   socket.on('disconnect', () => {
     io.emit('disconnectPeer', socket.id);
   });
-
-  socket.on('stream-packet', (data) => {
-    io.emit('stream-packet', data);
-  });
-
-  socket.on('stream-status', (data) => {
-    io.emit('stream-status', data);
-  });
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log('Server running');
-});
+server.listen(process.env.PORT || 3000, () => console.log('Server running'));
