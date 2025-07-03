@@ -5,8 +5,9 @@ const statusLabel = document.getElementById('statusLabel');
 const pausedOverlay = document.getElementById('pausedOverlay');
 
 socket.emit('watcher');
+socket.emit('session-state-request');
 
-socket.on('session-state', ({ micOn, screenOn }) => {
+socket.on('session-state', ({ screenOn }) => {
   statusLabel.textContent = screenOn ? 'STREAM ON' : 'STREAM OFF';
   statusLabel.style.background = screenOn ? 'green' : 'red';
   pausedOverlay.style.display = screenOn ? 'none' : 'flex';
@@ -16,8 +17,7 @@ socket.on('offer', (id, signal) => {
   peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
-    video.srcObject = stream;
-    video.play().catch(() => {});
+    video.srcObject = stream; video.play().catch(() => {});
     pausedOverlay.style.display = 'none';
   });
   peer.signal(signal);
@@ -32,8 +32,8 @@ socket.on('screen-toggle', on => {
   pausedOverlay.style.display = on ? 'none' : 'flex';
 });
 
-socket.on('mic-toggle', on => {
-  // Optional: Show mic active indicator
+socket.on('mic-toggle', () => {
+  // optional: show mic-on UI
 });
 
 document.getElementById('fullscreenBtn').onclick = () => {

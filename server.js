@@ -24,8 +24,9 @@ app.post('/login', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  socket.on('session-state-request', () => {
   socket.emit('session-state', sessionState);
-
+});
   socket.on('broadcaster', () => {
     // nothing else needed here
   });
