@@ -7,6 +7,21 @@ const vid = document.getElementById('viewer'),
       pausedOverlay = document.getElementById('pausedOverlay'),
       viewersCount = document.getElementById('viewersCount');
 
+function initMediaSource() {
+  mediaSource = new MediaSource();
+  video.src = URL.createObjectURL(mediaSource);
+  mediaSource.addEventListener('sourceopen', () => {
+    sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8,vorbis"');
+  });
+}
+
+socket.on('stream-packet', async blob => {
+  if (!mediaSource) initMediaSource();
+  await waitFor(() => sourceBuffer && !sourceBuffer.updating);
+  const buf = await blob.arrayBuffer();
+  sourceBuffer.appendBuffer(new Uint8Array(buf));
+});
+
 
 socket.on('viewer-count', count => {
   viewersCount.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
