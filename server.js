@@ -9,7 +9,8 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PASSWORD = 'secret123';
-let viewers =0;
+let broadcasterSocketId = null;
+let viewers = 0;
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
@@ -20,17 +21,16 @@ app.post('/login', (req, res) => {
   return res.send('Incorrect password');
 });
 
-let broadcasterSocketId = null;
-
 io.on('connection', (socket) => {
-  socket.emit('viewer-count', viewers);
+  socket.emit('viewers-count', viewers);
+
   socket.on('broadcaster', () => {
     broadcasterSocketId = socket.id;
   });
 
   socket.on('watcher', () => {
     viewers++;
-    io.emit('viewer-count', viewers);
+    io.emit('viewers-count', viewers);
     if (broadcasterSocketId) {
       io.to(broadcasterSocketId).emit('watcher', socket.id);
     }
@@ -49,12 +49,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    if (viewers>0) viewers--;
-    io.emit('viewer-count', viewers);
+    if (viewers > 0) viewers--;
+    io.emit('viewers-count', viewers);
     io.emit('disconnectPeer', socket.id);
   });
 
-  socket.on('stream-status', isOn => {
+  socket.on('stream-status', (isOn) => {
     io.emit('stream-status', isOn);
   });
 });
