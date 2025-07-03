@@ -113,3 +113,18 @@ video#viewer {
 button:hover {
   background: #004ecc;
 }
+
+#statusLabel {
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  color: white;
+}
+.status-on {
+  background: green;
+}
+.status-off {
+  background: red;
+}

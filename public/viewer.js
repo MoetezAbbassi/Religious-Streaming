@@ -1,32 +1,50 @@
 const socket = io();
-let peer;
-
-const video = document.getElementById('viewer');
-const statusLabel = document.getElementById('statusLabel');
-const pausedOverlay = document.getElementById('pausedOverlay');
-
 socket.emit('watcher');
 
-socket.on('offer', (id, signal) => {
-  peer = new SimplePeer({ initiator: false, trickle: false });
+let mediaSource, sourceBuffer;
+const video = document.getElementById('viewer');
+const statusLabel = document.getElementById('statusLabel');
+video.controls = true;
+
+function initMediaSource() {
+  mediaSource = new MediaSource();
+  video.src = URL.createObjectURL(mediaSource);
+  mediaSource.addEventListener('sourceopen', () => {
+    sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8,vorbis"');
+  });
+}
+
+socket.on('stream-packet', async blob => {
+  if (!mediaSource) initMediaSource();
+  await waitFor(() => sourceBuffer && !sourceBuffer.updating);
+  const buf = await blob.arrayBuffer();
+  sourceBuffer.appendBuffer(new Uint8Array(buf));
+});
+
+socket.on('offer', (id, sig) => {
+  const peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
     video.srcObject = stream;
     video.play().catch(() => {});
-    statusLabel.textContent = 'STREAM ON';
-    statusLabel.style.background = 'green';
-    pausedOverlay.style.display = 'none';
   });
-  peer.signal(signal);
+  peer.signal(sig);
 });
 
-socket.on('disconnectPeer', () => {
-  peer?.destroy();
-  statusLabel.textContent = 'STREAM OFF';
-  statusLabel.style.background = 'red';
-  pausedOverlay.style.display = 'flex';
+socket.on('candidate', (id, cand) => peer.signal(cand));
+socket.on('disconnectPeer', () => peer?.destroy());
+
+socket.on('stream-status', isOn => {
+  statusLabel.textContent = isOn ? 'Stream ON' : 'Stream OFF';
+  statusLabel.className = isOn ? 'status-on' : 'status-off';
 });
 
 document.getElementById('fullscreenBtn').onclick = () => {
-  video.requestFullscreen?.();
+  if (video.requestFullscreen) video.requestFullscreen();
 };
+
+function waitFor(cond) {
+  return new Promise(res => {
+    const iv = setInterval(() => { if (cond()) { clearInterval(iv); res(); } }, 50);
+  });
+}
