@@ -1,59 +1,59 @@
 const socket = io();
-let micStream = null;
-let screenStream = null;
-let peers = {};
+let micStream=null, screenStream=null, fullStream=null;
+const peers={};
 let mediaRecorder;
 
 socket.emit('broadcaster');
 
-socket.on('watcher', id => {
-  const combined = new MediaStream([
-    ...(screenStream?.getTracks() || []),
-    ...(micStream?.getAudioTracks() || [])
-  ]);
-  const peer = new SimplePeer({ initiator: true, trickle: false, stream: combined });
-  peer.on('signal', data => socket.emit('offer', id, data));
-  peer.on('close', () => delete peers[id]);
-  peers[id] = peer;
-});
+const micBtn = document.getElementById('micBtn'),
+      screenBtn = document.getElementById('screenBtn');
 
-socket.on('answer', (id, sig) => peers[id]?.signal(sig));
-socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
-socket.on('disconnectPeer', id => { peers[id]?.destroy(); delete peers[id]; });
+function updateViewers(count){
+  document.getElementById('viewersCount').textContent = `👥 ${count} Viewer${count!==1?'s':''}`;
+}
 
-document.getElementById('micBtn').onclick = async () => {
+socket.on('viewer-count', updateViewers);
+
+micBtn.onclick = async () => {
   if (!micStream) {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    micBtn.className = 'mic-on'; micBtn.textContent = 'Turn Mic Off';
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    micBtn.textContent = 'Turn Mic Off'; micBtn.className='mic-on';
   } else {
-    micStream.getTracks().forEach(t => t.stop());
+    micStream.getTracks().forEach(t=>t.stop());
     micStream = null;
-    micBtn.className = 'mic-off'; micBtn.textContent = 'Turn Mic On';
+    micBtn.textContent = 'Turn Mic On'; micBtn.className='mic-off';
   }
 };
 
-document.getElementById('screenBtn').onclick = async () => {
+screenBtn.onclick = async () => {
   if (!screenStream) {
-    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    screenBtn.className = 'screen-on'; screenBtn.textContent = 'Turn Screen Off';
-    preview.srcObject = screenStream;
+    screenStream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    document.getElementById('preview').srcObject = screenStream;
+    screenBtn.textContent = 'Turn Screen Off'; screenBtn.className='screen-on';
 
-    const combined = new MediaStream([
+    fullStream = new MediaStream([
       ...screenStream.getTracks(),
-      ...(micStream?.getAudioTracks() || [])
+      ...(micStream ? micStream.getAudioTracks() : [])
     ]);
 
-    mediaRecorder = new MediaRecorder(combined);
-    mediaRecorder.ondataavailable = () => {}; // Placeholder
-    mediaRecorder.start();
     socket.emit('broadcaster');
-    socket.emit('stream-status', true);
   } else {
-    screenStream.getTracks().forEach(t => t.stop());
+    screenStream.getTracks().forEach(t=>t.stop());
     screenStream = null;
-    screenBtn.className = 'screen-off'; screenBtn.textContent = 'Turn Screen On';
-    preview.srcObject = null;
-    mediaRecorder?.stop();
-    socket.emit('stream-status', false);
+    fullStream = null;
+    document.getElementById('preview').srcObject = null;
+    screenBtn.textContent = 'Turn Screen On'; screenBtn.className='screen-off';
   }
 };
+
+socket.on('watcher', id => {
+  if (!fullStream) return;
+  const peer = new SimplePeer({initiator:true,trickle:false,stream:fullStream});
+  peer.on('signal', data=>socket.emit('offer',id,data));
+  peer.on('close',()=>peer.destroy());
+  peers[id]=peer;
+});
+
+socket.on('answer',(id,sig)=>peers[id]?.signal(sig));
+socket.on('candidate',(id,cand)=>peers[id]?.signal(cand));
+socket.on('disconnectPeer',id=>peers[id]?.destroy());

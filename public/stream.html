@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Stream</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lecturer - Live Stream</title>
+  <link rel="stylesheet" href="stream.css">
 </head>
-<body class="attendee-body">
-  <h2>Live Stream Control Panel</h2>
-  <div class="controls">
-    <button id="micBtn" class="mic-off">Toggle Mic</button>
-    <button id="screenBtn" class="screen-off">Toggle Screen</button>
-  </div>
-  <video id="preview" autoplay muted></video>
+<body>
+  <header>
+    <h1>Lecturer Panel</h1>
+    <div id="viewersCount">👥 0 Viewer</div>
+  </header>
+
+  <main>
+    <div class="video-container">
+      <video id="preview" autoplay muted></video>
+    </div>
+  </main>
+
+  <footer>
+    <button id="micBtn" class="mic-off">Turn Mic On</button>
+    <button id="screenBtn" class="screen-off">Turn Screen On</button>
+  </footer>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
