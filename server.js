@@ -1,14 +1,16 @@
 const express = require('express');
 const http = require('http');
-const bodyParser = require('body-parser');
 const path = require('path');
+const bodyParser = require('body-parser');
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const PORT = process.env.PORT || 3000;
 const PASSWORD = 'secret123';
+
 let broadcasterSocketId = null;
 let viewers = 0;
 
@@ -17,11 +19,14 @@ app.use(express.static('public'));
 
 app.post('/login', (req, res) => {
   const { password } = req.body;
-  if (password === PASSWORD) return res.redirect('/stream.html');
-  return res.send('Incorrect password');
+  if (password === PASSWORD) {
+    return res.redirect('/stream.html');
+  }
+  res.send('Incorrect password');
 });
 
 io.on('connection', (socket) => {
+  // Send current viewer count immediately
   socket.emit('viewers-count', viewers);
 
   socket.on('broadcaster', () => {
@@ -48,17 +53,24 @@ io.on('connection', (socket) => {
     io.to(id).emit('candidate', socket.id, message);
   });
 
-  socket.on('disconnect', () => {
-    if (viewers > 0) viewers--;
-    io.emit('viewers-count', viewers);
-    io.emit('disconnectPeer', socket.id);
-  });
-
   socket.on('stream-status', (isOn) => {
     io.emit('stream-status', isOn);
   });
+
+  socket.on('disconnect', () => {
+    if (socket.id === broadcasterSocketId) {
+      broadcasterSocketId = null;
+    }
+
+    if (viewers > 0) {
+      viewers--;
+    }
+
+    io.emit('viewers-count', viewers);
+    io.emit('disconnectPeer', socket.id);
+  });
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log('Server running');
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

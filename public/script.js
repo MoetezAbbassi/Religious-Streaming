@@ -26,6 +26,7 @@ screenBtn.onclick = async () => {
   if (!screenStream) {
     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     document.getElementById('preview').srcObject = screenStream;
+
     screenBtn.textContent = 'Turn Screen Off';
     screenBtn.className = 'screen-on';
 
@@ -36,20 +37,28 @@ screenBtn.onclick = async () => {
 
     socket.emit('broadcaster');
     socket.emit('stream-status', true);
+
+    peers = {}; // reset
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
     fullStream = null;
     document.getElementById('preview').srcObject = null;
+
     screenBtn.textContent = 'Turn Screen On';
     screenBtn.className = 'screen-off';
+
     socket.emit('stream-status', false);
   }
 };
 
 socket.on('watcher', id => {
   if (!fullStream) return;
-  const peer = new SimplePeer({ initiator: true, trickle: false, stream: fullStream });
+  const peer = new SimplePeer({
+    initiator: true,
+    trickle: false,
+    stream: fullStream
+  });
   peer.on('signal', data => socket.emit('offer', id, data));
   peer.on('close', () => peer.destroy());
   peers[id] = peer;
