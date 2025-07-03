@@ -1,18 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Live Class</title>
   <style>
-    body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #f7f9fc; color: #333; }
-    .attendee-body { display: flex; flex-direction: column; align-items: center; padding: 2rem; }
-    .title { font-size: 2rem; margin-bottom: 1rem; }
-    .video-wrapper { position: relative; background: black; width: 100%; max-width: 800px; height: 450px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; }
-    video#viewer { width: 100%; height: 100%; object-fit: contain; background: black; }
-    #pausedOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; display: none; align-items: center; justify-content: center; font-size: 2em; z-index: 5; pointer-events: none; }
-    #statusLabel { padding: 10px 16px; font-weight: bold; color: white; border-radius: 5px; margin-bottom: 10px; }
-    button { padding: 12px 20px; font-size: 16px; background: #0066ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #004ecc; }
+    body, html {
+      margin: 0; padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f7f9fc;
+      color: #333;
+    }
+
+    .attendee-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .title {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      height: 450px;
+      margin-bottom: 20px;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #viewer {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: black;
+    }
+
+    #pausedOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      z-index: 10;
+    }
+
+    #statusLabel {
+      padding: 10px 16px;
+      background: red;
+      color: white;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background: #0066ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #004ecc;
+    }
   </style>
 </head>
 <body class="attendee-body">
