@@ -1,7 +1,7 @@
 const socket = io();
 let micStream = null;
 let screenStream = null;
-let mixedStream = null;
+let fullStream = null;
 let peers = {};
 
 socket.emit('broadcaster');
@@ -26,23 +26,17 @@ document.getElementById('screenBtn').onclick = async () => {
     screenBtn.textContent = 'Screen Off';
     screenBtn.className = 'screen-on';
 
-    const ctx = new AudioContext();
-    const dest = ctx.createMediaStreamDestination();
-
-    if (micStream) ctx.createMediaStreamSource(micStream).connect(dest);
-    if (screenStream.getAudioTracks().length)
-      ctx.createMediaStreamSource(new MediaStream(screenStream.getAudioTracks())).connect(dest);
-
-    mixedStream = new MediaStream([
-      ...screenStream.getVideoTracks(),
-      ...dest.stream.getAudioTracks()
+    // Combine video + audio tracks
+    fullStream = new MediaStream([
+      ...screenStream.getTracks(),
+      ...(micStream ? micStream.getAudioTracks() : [])
     ]);
 
     socket.emit('broadcaster');
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
-    mixedStream = null;
+    fullStream = null;
     document.getElementById('preview').srcObject = null;
     screenBtn.textContent = 'Screen On';
     screenBtn.className = 'screen-off';
@@ -50,9 +44,9 @@ document.getElementById('screenBtn').onclick = async () => {
 };
 
 socket.on('watcher', id => {
-  if (!mixedStream) return;
+  if (!fullStream) return;
 
-  const peer = new SimplePeer({ initiator: true, trickle: false, stream: mixedStream });
+  const peer = new SimplePeer({ initiator: true, trickle: false, stream: fullStream });
   peer.on('signal', data => socket.emit('offer', id, data));
   peer.on('close', () => peer.destroy());
   peers[id] = peer;
