@@ -9,6 +9,8 @@ video.controls = true;
 socket.on('stream-status', isOn => {
   statusLabel.textContent = isOn ? 'Stream ON' : 'Stream OFF';
   statusLabel.className = isOn ? 'status-on' : 'status-off';
+
+  if (isOn && !peer) attemptReconnect(500); // start retry if live
 });
 
 socket.on('offer', (id, sig) => {
@@ -23,8 +25,14 @@ socket.on('offer', (id, sig) => {
 
 socket.on('candidate', (id, cand) => peer?.signal(cand));
 socket.on('disconnectPeer', () => peer?.destroy());
-socket.on('viewers-count', () => {}); // Ignored on attendee
 
 document.getElementById('fullscreenBtn').onclick = () => {
   if (video.requestFullscreen) video.requestFullscreen();
 };
+
+function attemptReconnect(delay) {
+  if (peer || delay > 8000) return;
+  console.log('Retrying to connect...');
+  socket.emit('watcher');
+  setTimeout(() => attemptReconnect(delay * 2), delay);
+}

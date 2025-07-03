@@ -6,11 +6,15 @@ let mediaRecorder;
 
 socket.emit('broadcaster');
 
-socket.on('watcher', id => {
-  const combined = new MediaStream([
+function createCombinedStream() {
+  return new MediaStream([
     ...(screenStream?.getTracks() || []),
     ...(micStream?.getAudioTracks() || [])
   ]);
+}
+
+socket.on('watcher', id => {
+  const combined = createCombinedStream();
   const peer = new SimplePeer({ initiator: true, trickle: false, stream: combined });
   peer.on('signal', data => socket.emit('offer', id, data));
   peer.on('close', () => delete peers[id]);
@@ -38,21 +42,18 @@ document.getElementById('screenBtn').onclick = async () => {
     screenBtn.className = 'screen-on'; screenBtn.textContent = 'Turn Screen Off';
     preview.srcObject = screenStream;
 
-    const combined = new MediaStream([
-      ...screenStream.getTracks(),
-      ...(micStream?.getAudioTracks() || [])
-    ]);
-
+    const combined = createCombinedStream();
     mediaRecorder = new MediaRecorder(combined);
     mediaRecorder.ondataavailable = () => {};
     mediaRecorder.start();
+
     socket.emit('broadcaster');
     socket.emit('stream-status', true);
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
-    screenBtn.className = 'screen-off'; screenBtn.textContent = 'Turn Screen On';
     preview.srcObject = null;
+    screenBtn.className = 'screen-off'; screenBtn.textContent = 'Turn Screen On';
     mediaRecorder?.stop();
     socket.emit('stream-status', false);
   }
