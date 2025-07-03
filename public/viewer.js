@@ -8,8 +8,8 @@ const viewersCount = document.getElementById('viewersCount');
 
 socket.emit('watcher');
 
-socket.on('viewers-count', cnt => {
-  viewersCount.textContent = `👥 ${cnt} Viewer${cnt !== 1 ? 's' : ''}`;
+socket.on('viewers-count', count => {
+  viewersCount.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
 });
 
 socket.on('stream-status', isOn => {
@@ -17,9 +17,9 @@ socket.on('stream-status', isOn => {
   statusLabel.className = isOn ? 'status-on' : 'status-off';
   pausedOverlay.style.display = isOn ? 'none' : 'flex';
   if (!isOn && peer) {
-    video.srcObject = null;
     peer.destroy();
     peer = null;
+    video.srcObject = null;
   }
 });
 
@@ -29,6 +29,7 @@ socket.on('offer', (id, sig) => {
   peer.on('stream', stream => {
     video.srcObject = stream;
     video.play().catch(() => {});
+    pausedOverlay.style.display = 'none';
   });
   peer.signal(sig);
 });
