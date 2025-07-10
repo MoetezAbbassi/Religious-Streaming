@@ -1,5 +1,4 @@
 const socket = io();
-
 let peer = null;
 let retries = 0;
 
@@ -8,7 +7,10 @@ const statusLabel = document.getElementById('statusLabel');
 const pausedOverlay = document.getElementById('pausedOverlay');
 const viewersCount = document.getElementById('viewersCount');
 
+video.muted = true;
+video.playsInline = true;
 video.controls = true;
+
 socket.emit('watcher');
 
 socket.on('viewers-count', count => {
@@ -27,11 +29,16 @@ socket.on('offer', (id, sig) => {
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
     video.srcObject = stream;
-    video.play().catch(() => {});
+    video.play().catch(e => console.log('Playback error:', e));
     pausedOverlay.style.display = 'none';
     retries = 0;
   });
   peer.on('close', () => {
+    peer = null;
+    retryConnect();
+  });
+  peer.on('error', () => {
+    peer.destroy();
     peer = null;
     retryConnect();
   });
@@ -50,6 +57,7 @@ document.getElementById('fullscreenBtn').onclick = () => {
 };
 
 function connectStream() {
+  retries = 0;
   socket.emit('watcher');
 }
 
@@ -57,6 +65,6 @@ function retryConnect() {
   if (peer || retries > 5) return;
   retries++;
   setTimeout(() => {
-    connectStream();
+    socket.emit('watcher');
   }, 500 * retries);
 }

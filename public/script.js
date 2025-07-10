@@ -92,6 +92,8 @@ screenBtn.onclick = async () => {
 };
 
 socket.on('watcher', id => {
+  if (peers[id]) return; // Prevent re-init on reload
+
   const stream = createCombinedStream();
   const peer = new SimplePeer({ initiator: true, trickle: false, stream });
 
