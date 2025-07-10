@@ -1,38 +1,65 @@
 const socket = io();
-socket.emit('watcher');
+let peer = null;
+let reconnectAttempts = 0;
 
-let peer;
 const video = document.getElementById('viewer');
 const statusLabel = document.getElementById('statusLabel');
-video.controls = true;
+const pausedOverlay = document.getElementById('pausedOverlay');
+const viewersCount = document.getElementById('viewersCount');
+
+socket.emit('watcher');
+
+socket.on('viewers-count', count => {
+  viewersCount.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
+});
 
 socket.on('stream-status', isOn => {
-  statusLabel.textContent = isOn ? 'Stream ON' : 'Stream OFF';
+  statusLabel.textContent = isOn ? '🟢 LIVE' : '🔴 OFFLINE';
   statusLabel.className = isOn ? 'status-on' : 'status-off';
-
-  if (isOn && !peer) attemptReconnect(500); // start retry if live
+  pausedOverlay.style.display = isOn ? 'none' : 'flex';
+  if (isOn && !peer) connectToStream();
 });
 
 socket.on('offer', (id, sig) => {
+  setupPeer(id, sig);
+});
+
+socket.on('candidate', (id, cand) => peer?.signal(cand));
+socket.on('disconnectPeer', () => {
+  peer?.destroy();
+  peer = null;
+  pausedOverlay.style.display = 'flex';
+});
+
+document.getElementById('fullscreenBtn').onclick = () => {
+  video.requestFullscreen?.();
+};
+
+function setupPeer(id, sig) {
   peer = new SimplePeer({ initiator: false, trickle: false });
   peer.on('signal', data => socket.emit('answer', id, data));
   peer.on('stream', stream => {
     video.srcObject = stream;
     video.play().catch(() => {});
+    pausedOverlay.style.display = 'none';
+    reconnectAttempts = 0;
+  });
+  peer.on('close', () => {
+    peer = null;
+    attemptReconnect(100);
   });
   peer.signal(sig);
-});
+}
 
-socket.on('candidate', (id, cand) => peer?.signal(cand));
-socket.on('disconnectPeer', () => peer?.destroy());
-
-document.getElementById('fullscreenBtn').onclick = () => {
-  if (video.requestFullscreen) video.requestFullscreen();
-};
+function connectToStream() {
+  socket.emit('watcher');
+}
 
 function attemptReconnect(delay) {
-  if (peer || delay > 8000) return;
-  console.log('Retrying to connect...');
-  socket.emit('watcher');
-  setTimeout(() => attemptReconnect(delay * 2), delay);
+  if (peer || reconnectAttempts > 5) return;
+  reconnectAttempts++;
+  setTimeout(() => {
+    console.log('Reconnecting attempt', reconnectAttempts);
+    connectToStream();
+  }, delay * reconnectAttempts);
 }
