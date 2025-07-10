@@ -1,54 +1,115 @@
-const express = require('express');
-const http = require('http');
-const bodyParser = require('body-parser');
-const { Server } = require('socket.io');
+const socket = io();
+let micStream = null;
+let screenStream = null;
+let peers = {};
+let isMicOn = false;
+let isScreenOn = false;
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const micBtn = document.getElementById('micBtn');
+const screenBtn = document.getElementById('screenBtn');
+const preview = document.getElementById('preview');
+const viewersCountLabel = document.getElementById('viewersCount');
 
-const PASSWORD = 'secret123';
-let broadcaster = null;
-let streamOn = false;
-let viewers = 0;
+socket.emit('broadcaster');
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static('public'));
+function createCombinedStream() {
+  return new MediaStream([
+    ...(screenStream?.getTracks() || []),
+    ...(micStream?.getAudioTracks() || [])
+  ]);
+}
 
-app.post('/login', (req, res) => {
-  const { password } = req.body;
-  return password === PASSWORD ? res.redirect('/stream.html') : res.send('Incorrect password');
+function updatePeers() {
+  const combined = createCombinedStream();
+  Object.values(peers).forEach(peer => {
+    const senders = peer._pc.getSenders();
+
+    combined.getTracks().forEach(track => {
+      const existing = senders.find(s => s.track?.kind === track.kind);
+      if (existing) {
+        existing.replaceTrack(track);
+      } else {
+        peer._pc.addTrack(track, combined);
+      }
+    });
+  });
+}
+
+micBtn.onclick = async () => {
+  if (!isMicOn) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      isMicOn = true;
+      micBtn.textContent = 'Turn Mic Off';
+      micBtn.className = 'mic-on';
+    } catch (e) {
+      alert('Mic access denied or unavailable');
+    }
+  } else {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+    isMicOn = false;
+    micBtn.textContent = 'Turn Mic On';
+    micBtn.className = 'mic-off';
+  }
+  updatePeers();
+};
+
+screenBtn.onclick = async () => {
+  if (!isScreenOn) {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      preview.srcObject = screenStream;
+      isScreenOn = true;
+      screenBtn.textContent = 'Turn Screen Off';
+      screenBtn.className = 'screen-on';
+
+      screenStream.getVideoTracks()[0].onended = () => {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+        isScreenOn = false;
+        screenBtn.textContent = 'Turn Screen On';
+        screenBtn.className = 'screen-off';
+        preview.srcObject = null;
+        socket.emit('stream-status', false);
+        updatePeers();
+      };
+
+      socket.emit('stream-status', true);
+    } catch (e) {
+      alert('Screen share failed or was blocked');
+    }
+  } else {
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+    isScreenOn = false;
+    screenBtn.textContent = 'Turn Screen On';
+    screenBtn.className = 'screen-off';
+    preview.srcObject = null;
+    socket.emit('stream-status', false);
+  }
+  updatePeers();
+};
+
+socket.on('watcher', id => {
+  const stream = createCombinedStream();
+  const peer = new SimplePeer({ initiator: true, trickle: false, stream });
+
+  peer.on('signal', data => socket.emit('offer', id, data));
+  peer.on('close', () => { peer.destroy(); delete peers[id]; });
+  peer.on('error', () => { peer.destroy(); delete peers[id]; });
+
+  peers[id] = peer;
 });
 
-io.on('connection', socket => {
-  socket.emit('viewers-count', viewers);
-  socket.emit('stream-status', streamOn);
-
-  socket.on('broadcaster', () => {
-    broadcaster = socket.id;
-  });
-
-  socket.on('watcher', () => {
-    viewers++;
-    io.emit('viewers-count', viewers);
-    if (broadcaster) io.to(broadcaster).emit('watcher', socket.id);
-  });
-
-  socket.on('offer', (id, msg) => io.to(id).emit('offer', socket.id, msg));
-  socket.on('answer', (id, msg) => io.to(id).emit('answer', socket.id, msg));
-  socket.on('candidate', (id, msg) => io.to(id).emit('candidate', socket.id, msg));
-
-  socket.on('stream-status', isOn => {
-    streamOn = isOn;
-    io.emit('stream-status', streamOn);
-  });
-
-  socket.on('disconnect', () => {
-    if (socket.id === broadcaster) broadcaster = null;
-    if (viewers > 0) viewers--;
-    io.emit('viewers-count', viewers);
-    io.emit('disconnectPeer', socket.id);
-  });
+socket.on('answer', (id, sig) => peers[id]?.signal(sig));
+socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
+socket.on('disconnectPeer', id => {
+  peers[id]?.destroy();
+  delete peers[id];
 });
 
-server.listen(process.env.PORT || 3000, () => console.log('Server running'));
+socket.on('viewers-count', count => {
+  if (viewersCountLabel)
+    viewersCountLabel.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
+});

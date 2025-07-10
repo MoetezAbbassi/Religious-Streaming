@@ -1,9 +1,9 @@
 const socket = io();
-
 let micStream = null;
 let screenStream = null;
 let peers = {};
-let broadcasterStarted = false;
+let isMicOn = false;
+let isScreenOn = false;
 
 const micBtn = document.getElementById('micBtn');
 const screenBtn = document.getElementById('screenBtn');
@@ -19,93 +19,76 @@ function createCombinedStream() {
   ]);
 }
 
-function startBroadcast() {
-  if (!broadcasterStarted && (screenStream || micStream)) {
-    socket.emit('broadcaster');
-    socket.emit('stream-status', true);
-    broadcasterStarted = true;
-  }
-}
-
-function stopBroadcast() {
-  socket.emit('stream-status', false);
-  broadcasterStarted = false;
-}
-
 function updatePeers() {
-  const newStream = createCombinedStream();
+  const combined = createCombinedStream();
   Object.values(peers).forEach(peer => {
     const senders = peer._pc.getSenders();
 
-    newStream.getTracks().forEach(track => {
-      const sender = senders.find(s => s.track?.kind === track.kind);
-      if (sender) {
-        sender.replaceTrack(track);
+    combined.getTracks().forEach(track => {
+      const existing = senders.find(s => s.track?.kind === track.kind);
+      if (existing) {
+        existing.replaceTrack(track);
       } else {
-        peer._pc.addTrack(track, newStream);
+        peer._pc.addTrack(track, combined);
       }
     });
   });
 }
 
 micBtn.onclick = async () => {
-  if (!micStream) {
+  if (!isMicOn) {
     try {
       micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      isMicOn = true;
       micBtn.textContent = 'Turn Mic Off';
       micBtn.className = 'mic-on';
-      startBroadcast();
-      updatePeers();
-    } catch (err) {
-      alert("Microphone access denied or unavailable.");
+    } catch (e) {
+      alert('Mic access denied or unavailable');
     }
   } else {
     micStream.getTracks().forEach(t => t.stop());
     micStream = null;
+    isMicOn = false;
     micBtn.textContent = 'Turn Mic On';
     micBtn.className = 'mic-off';
-    updatePeers();
   }
-
-  if (!micStream && !screenStream) {
-    stopBroadcast();
-  }
+  updatePeers();
 };
 
 screenBtn.onclick = async () => {
-  if (!screenStream) {
+  if (!isScreenOn) {
     try {
       screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      preview.srcObject = screenStream;
+      isScreenOn = true;
       screenBtn.textContent = 'Turn Screen Off';
       screenBtn.className = 'screen-on';
-      preview.srcObject = screenStream;
 
       screenStream.getVideoTracks()[0].onended = () => {
         screenStream.getTracks().forEach(t => t.stop());
         screenStream = null;
+        isScreenOn = false;
         screenBtn.textContent = 'Turn Screen On';
         screenBtn.className = 'screen-off';
         preview.srcObject = null;
+        socket.emit('stream-status', false);
         updatePeers();
-        if (!micStream) stopBroadcast();
-        else socket.emit('stream-status', true);
       };
 
-      startBroadcast();
-      updatePeers();
-    } catch (err) {
-      alert("Screen share failed or was blocked.");
+      socket.emit('stream-status', true);
+    } catch (e) {
+      alert('Screen share failed or was blocked');
     }
   } else {
     screenStream.getTracks().forEach(t => t.stop());
     screenStream = null;
+    isScreenOn = false;
     screenBtn.textContent = 'Turn Screen On';
     screenBtn.className = 'screen-off';
     preview.srcObject = null;
-    updatePeers();
-    if (!micStream) stopBroadcast();
-    else socket.emit('stream-status', true);
+    socket.emit('stream-status', false);
   }
+  updatePeers();
 };
 
 socket.on('watcher', id => {
@@ -113,14 +96,8 @@ socket.on('watcher', id => {
   const peer = new SimplePeer({ initiator: true, trickle: false, stream });
 
   peer.on('signal', data => socket.emit('offer', id, data));
-  peer.on('close', () => {
-    peer.destroy();
-    delete peers[id];
-  });
-  peer.on('error', () => {
-    peer.destroy();
-    delete peers[id];
-  });
+  peer.on('close', () => { peer.destroy(); delete peers[id]; });
+  peer.on('error', () => { peer.destroy(); delete peers[id]; });
 
   peers[id] = peer;
 });
@@ -133,7 +110,6 @@ socket.on('disconnectPeer', id => {
 });
 
 socket.on('viewers-count', count => {
-  if (viewersCountLabel) {
+  if (viewersCountLabel)
     viewersCountLabel.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
-  }
 });
