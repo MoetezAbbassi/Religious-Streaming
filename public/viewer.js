@@ -46,10 +46,8 @@ socket.on('offer', (id, sig) => {
 });
 
 socket.on('candidate', (id, cand) => peer?.signal(cand));
-socket.on('disconnectPeer', () => {
-  peer?.destroy();
-  peer = null;
-  pausedOverlay.style.display = 'flex';
+socket.on('disconnectPeer', (id) => {
+  // Ignore disconnectPeer on viewers completely
 });
 
 document.getElementById('fullscreenBtn').onclick = () => {

@@ -87,11 +87,12 @@ socket.on('watcher', id => {
 
 socket.on('answer', (id, sig) => peers[id]?.signal(sig));
 socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
-socket.on('disconnectPeer', id => {
-  peers[id]?.destroy();
-  delete peers[id];
+socket.on('disconnectPeer', (id) => {
+  if (peers[id]) {
+    peers[id].destroy();
+    delete peers[id];
+  }
 });
-
 socket.on('viewers-count', count => {
   if (viewersCountLabel)
     viewersCountLabel.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
