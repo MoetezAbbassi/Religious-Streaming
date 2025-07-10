@@ -19,22 +19,6 @@ function createCombinedStream() {
   ]);
 }
 
-function updatePeers() {
-  const combined = createCombinedStream();
-  Object.values(peers).forEach(peer => {
-    const senders = peer._pc.getSenders();
-
-    combined.getTracks().forEach(track => {
-      const existing = senders.find(s => s.track?.kind === track.kind);
-      if (existing) {
-        existing.replaceTrack(track);
-      } else {
-        peer._pc.addTrack(track, combined);
-      }
-    });
-  });
-}
-
 micBtn.onclick = async () => {
   if (!isMicOn) {
     try {
@@ -52,7 +36,6 @@ micBtn.onclick = async () => {
     micBtn.textContent = 'Turn Mic On';
     micBtn.className = 'mic-off';
   }
-  updatePeers();
 };
 
 screenBtn.onclick = async () => {
@@ -72,7 +55,6 @@ screenBtn.onclick = async () => {
         screenBtn.className = 'screen-off';
         preview.srcObject = null;
         socket.emit('stream-status', false);
-        updatePeers();
       };
 
       socket.emit('stream-status', true);
@@ -88,11 +70,10 @@ screenBtn.onclick = async () => {
     preview.srcObject = null;
     socket.emit('stream-status', false);
   }
-  updatePeers();
 };
 
 socket.on('watcher', id => {
-  if (peers[id]) return; // Prevent re-init on reload
+  if (peers[id]) return;
 
   const stream = createCombinedStream();
   const peer = new SimplePeer({ initiator: true, trickle: false, stream });
