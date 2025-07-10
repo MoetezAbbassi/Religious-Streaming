@@ -19,6 +19,26 @@ function createCombinedStream() {
   ]);
 }
 
+function replaceTracksInPeers() {
+  const combined = createCombinedStream();
+  Object.values(peers).forEach(peer => {
+    const senders = peer._pc.getSenders();
+
+    combined.getTracks().forEach(track => {
+      const existing = senders.find(s => s.track?.kind === track.kind);
+      if (existing) {
+        existing.replaceTrack(track);
+      } else {
+        try {
+          peer._pc.addTrack(track, combined);
+        } catch (e) {
+          console.log("Track already exists in peer.");
+        }
+      }
+    });
+  });
+}
+
 micBtn.onclick = async () => {
   if (!isMicOn) {
     try {
@@ -36,6 +56,7 @@ micBtn.onclick = async () => {
     micBtn.textContent = 'Turn Mic On';
     micBtn.className = 'mic-off';
   }
+  replaceTracksInPeers();
 };
 
 screenBtn.onclick = async () => {
@@ -55,6 +76,7 @@ screenBtn.onclick = async () => {
         screenBtn.className = 'screen-off';
         preview.srcObject = null;
         socket.emit('stream-status', false);
+        replaceTracksInPeers();
       };
 
       socket.emit('stream-status', true);
@@ -70,6 +92,7 @@ screenBtn.onclick = async () => {
     preview.srcObject = null;
     socket.emit('stream-status', false);
   }
+  replaceTracksInPeers();
 };
 
 socket.on('watcher', id => {
@@ -87,12 +110,13 @@ socket.on('watcher', id => {
 
 socket.on('answer', (id, sig) => peers[id]?.signal(sig));
 socket.on('candidate', (id, cand) => peers[id]?.signal(cand));
-socket.on('disconnectPeer', (id) => {
+socket.on('disconnectPeer', id => {
   if (peers[id]) {
     peers[id].destroy();
     delete peers[id];
   }
 });
+
 socket.on('viewers-count', count => {
   if (viewersCountLabel)
     viewersCountLabel.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
