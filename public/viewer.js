@@ -14,7 +14,7 @@ video.controls = true;
 socket.emit('watcher');
 
 socket.on('viewers-count', count => {
-  viewersCount.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
+  viewersCount.textContent = `🟢 ${count} Viewer${count !== 1 ? 's' : ''}`;
 });
 
 socket.on('stream-status', isOn => {

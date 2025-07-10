@@ -119,5 +119,5 @@ socket.on('disconnectPeer', id => {
 
 socket.on('viewers-count', count => {
   if (viewersCountLabel)
-    viewersCountLabel.textContent = `👥 ${count} Viewer${count !== 1 ? 's' : ''}`;
+    viewersCountLabel.textContent = `🟢 ${count} Viewer${count !== 1 ? 's' : ''}`;
 });
