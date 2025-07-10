@@ -1,12 +1,14 @@
 const socket = io();
+
 let peer = null;
-let reconnectAttempts = 0;
+let retries = 0;
 
 const video = document.getElementById('viewer');
 const statusLabel = document.getElementById('statusLabel');
 const pausedOverlay = document.getElementById('pausedOverlay');
 const viewersCount = document.getElementById('viewersCount');
 
+video.controls = true;
 socket.emit('watcher');
 
 socket.on('viewers-count', count => {
@@ -17,11 +19,23 @@ socket.on('stream-status', isOn => {
   statusLabel.textContent = isOn ? '🟢 LIVE' : '🔴 OFFLINE';
   statusLabel.className = isOn ? 'status-on' : 'status-off';
   pausedOverlay.style.display = isOn ? 'none' : 'flex';
-  if (isOn && !peer) connectToStream();
+  if (isOn && !peer) connectStream();
 });
 
 socket.on('offer', (id, sig) => {
-  setupPeer(id, sig);
+  peer = new SimplePeer({ initiator: false, trickle: false });
+  peer.on('signal', data => socket.emit('answer', id, data));
+  peer.on('stream', stream => {
+    video.srcObject = stream;
+    video.play().catch(() => {});
+    pausedOverlay.style.display = 'none';
+    retries = 0;
+  });
+  peer.on('close', () => {
+    peer = null;
+    retryConnect();
+  });
+  peer.signal(sig);
 });
 
 socket.on('candidate', (id, cand) => peer?.signal(cand));
@@ -35,31 +49,14 @@ document.getElementById('fullscreenBtn').onclick = () => {
   video.requestFullscreen?.();
 };
 
-function setupPeer(id, sig) {
-  peer = new SimplePeer({ initiator: false, trickle: false });
-  peer.on('signal', data => socket.emit('answer', id, data));
-  peer.on('stream', stream => {
-    video.srcObject = stream;
-    video.play().catch(() => {});
-    pausedOverlay.style.display = 'none';
-    reconnectAttempts = 0;
-  });
-  peer.on('close', () => {
-    peer = null;
-    attemptReconnect(100);
-  });
-  peer.signal(sig);
-}
-
-function connectToStream() {
+function connectStream() {
   socket.emit('watcher');
 }
 
-function attemptReconnect(delay) {
-  if (peer || reconnectAttempts > 5) return;
-  reconnectAttempts++;
+function retryConnect() {
+  if (peer || retries > 5) return;
+  retries++;
   setTimeout(() => {
-    console.log('Reconnecting attempt', reconnectAttempts);
-    connectToStream();
-  }, delay * reconnectAttempts);
+    connectStream();
+  }, 500 * retries);
 }
