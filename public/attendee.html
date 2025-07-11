@@ -7,21 +7,22 @@
   <link rel="stylesheet" href="attendee.css">
 </head>
 <body>
-  <header>
-    <h1>Live Lecture Stream</h1>
-    <div id="statusLabel" class="status-off">🔴 OFFLINE</div>
-    <div id="viewersCount">🟢 0 Viewer</div>
-  </header>
-  <main>
-    <div class="video-container">
-      <video id="viewer" playsinline autoplay muted></video>
-      <div id="pausedOverlay">Stream Paused</div>
-    </div>
-  </main>
-  <footer>
-    <button id="fullscreenBtn">🔳 Fullscreen</button>
-  </footer>
-
+  <div class="overlay-content">
+    <header>
+      <h1>Live Lecture Stream</h1>
+      <div id="statusLabel" class="status-off">🔴 OFFLINE</div>
+      <div id="viewersCount">🟢 0 Viewer</div>
+    </header>
+    <main>
+      <div class="video-container">
+        <video id="viewer" playsinline autoplay muted></video>
+        <div id="pausedOverlay">Stream Paused</div>
+      </div>
+    </main>
+    <footer>
+      <button id="fullscreenBtn">🔳 Fullscreen</button>
+    </footer>
+  </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
   <script src="viewer.js"></script>

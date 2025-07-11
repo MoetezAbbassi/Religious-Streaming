@@ -7,21 +7,23 @@
   <link rel="stylesheet" href="stream.css">
 </head>
 <body>
-  <header>
-    <h1>Lecturer Panel</h1>
-    <div id="viewersCount"> 0 Viewer</div>
-  </header>
+  <div class="overlay-content">
+    <header>
+      <h1>Lecturer Panel</h1>
+      <div id="viewersCount">0 Viewer</div>
+    </header>
 
-  <main>
-    <div class="video-container">
-      <video id="preview" autoplay muted></video>
-    </div>
-  </main>
+    <main>
+      <div class="video-container">
+        <video id="preview" autoplay muted></video>
+      </div>
+    </main>
 
-  <footer>
-    <button id="micBtn" class="mic-off">Turn Mic On</button>
-    <button id="screenBtn" class="screen-off">Turn Screen On</button>
-  </footer>
+    <footer>
+      <button id="micBtn" class="mic-off">Turn Mic On</button>
+      <button id="screenBtn" class="screen-off">Turn Screen On</button>
+    </footer>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>

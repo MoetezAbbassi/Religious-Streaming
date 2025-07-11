@@ -34,7 +34,7 @@ function replaceTracksInPeers() {
         } catch (e) {
           console.log("Track already exists in peer.");
         }
-      }
+      } 
     });
   });
 }
